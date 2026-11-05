@@ -37,8 +37,8 @@ public class AuthController {
 
 	@PostMapping("/auth/request")
 	Map<String, Object> request(@RequestBody EmailIn in) {
-		auth.requestLink(in.email());
-		return Map.of("ok", true);
+		boolean onRoster = auth.requestLink(in.email());
+		return Map.of("ok", true, "on_roster", onRoster);
 	}
 
 	@PostMapping("/auth/verify")

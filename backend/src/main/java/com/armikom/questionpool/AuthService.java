@@ -66,20 +66,23 @@ public class AuthService {
 		}
 	}
 
-	/** Always returns quietly, so the caller cannot learn which addresses are on the roster. */
-	public void requestLink(String rawEmail) {
+	/**
+	 * Sends a single-use link when the address is on the roster. Returns {@code true} when the address is on the
+	 * roster (a link is queued, or the caller hit the rate limit), and {@code false} when it is not on the list.
+	 */
+	public boolean requestLink(String rawEmail) {
 		String email = normalize(rawEmail);
 		Optional<Long> userId = db.sql("select id from app_user where email = :e and active").param("e", email)
 				.query(Long.class).optional();
 		if (userId.isEmpty()) {
-			return;
+			return false;
 		}
 		int recent = db.sql("""
 				select count(*) from login_token
 				where user_id = :u and created_at > now() - interval '15 minutes'""").param("u", userId.get())
 				.query(Integer.class).single();
 		if (recent >= 3) {
-			return;
+			return true;
 		}
 		String token = randomToken();
 		db.sql("""
@@ -88,6 +91,7 @@ public class AuthService {
 				.param("u", userId.get()).update();
 		String link = props.baseUrl() + "/login?token=" + token;
 		background.submit(() -> sendLink(email, link));
+		return true;
 	}
 
 	private void sendLink(String email, String link) {

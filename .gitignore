@@ -1,4 +1,5 @@
 .env
+.deployment
 node_modules/
 dist/
 target/

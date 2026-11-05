@@ -6,6 +6,7 @@ import { post } from '../api'
 const token = useRoute().query.token
 const email = ref('')
 const sent = ref(false)
+const onRoster = ref(true)
 const busy = ref(false)
 const error = ref('')
 
@@ -13,7 +14,8 @@ async function requestLink() {
   busy.value = true
   error.value = ''
   try {
-    await post('/auth/request', { email: email.value })
+    const res = await post('/auth/request', { email: email.value })
+    onRoster.value = res.on_roster
     sent.value = true
   } catch (e) {
     error.value = e.message
@@ -46,9 +48,13 @@ async function signIn() {
     </template>
 
     <template v-else-if="sent">
-      <div class="note green">
-        <p><b>Check your school e-mail.</b> If your address is on the class list, a login link is on its way. The link works for 15 minutes.</p>
-        <p class="small">Okul e-postanı kontrol et. Adresin sınıf listesindeyse giriş bağlantısı gönderildi. Bağlantı 15 dakika geçerlidir. Gelen kutusunda yoksa "Gereksiz/Spam" klasörüne bak.</p>
+      <div v-if="onRoster" class="note green">
+        <p><b>Check your school e-mail.</b> Your address is on the class list, so a login link is on its way. The link works for 15 minutes.</p>
+        <p class="small">Okul e-postanı kontrol et. Adresin sınıf listesinde, giriş bağlantısı gönderildi. Bağlantı 15 dakika geçerlidir. Gelen kutusunda yoksa "Gereksiz/Spam" klasörüne bak.</p>
+      </div>
+      <div v-else class="note red">
+        <p><b>This address is not on the class list.</b> No login link was sent. Check the spelling of your school e-mail, or ask your instructor to add you to the list.</p>
+        <p class="small">Bu e-posta adresi sınıf listesinde bulunamadı, giriş bağlantısı gönderilmedi. Adresin doğru yazıldığından emin ol veya hocandan listeye eklenmeni iste.</p>
       </div>
       <button class="link" @click="sent = false">Use another address</button>
     </template>
