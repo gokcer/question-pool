@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Sends mail through Exchange Web Services (EWS) with NTLM login. For on-premises Exchange servers whose SMTP ports
- * are closed to the outside but whose web address (Outlook on the web) is open, for example mail.thk.edu.tr.
+ * are closed to the outside but whose web address (Outlook on the web) is open, for example mail.example.edu.
  * Uses HttpURLConnection because java.net.http.HttpClient has no NTLM support.
  */
 @Component
