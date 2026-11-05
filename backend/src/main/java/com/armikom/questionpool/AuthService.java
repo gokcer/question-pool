@@ -35,16 +35,18 @@ public class AuthService {
 	private final AppProps props;
 	private final ObjectProvider<JavaMailSender> mailSender;
 	private final ExecutorService background;
+	private final EwsMailer ews;
 	private final String smtpUser;
 	private final String smtpHost;
 
 	public AuthService(JdbcClient db, AppProps props, ObjectProvider<JavaMailSender> mailSender,
-			ExecutorService background, @Value("${spring.mail.username:}") String smtpUser,
+			ExecutorService background, EwsMailer ews, @Value("${spring.mail.username:}") String smtpUser,
 			@Value("${spring.mail.host:}") String smtpHost) {
 		this.db = db;
 		this.props = props;
 		this.mailSender = mailSender;
 		this.background = background;
+		this.ews = ews;
 		this.smtpUser = smtpUser;
 		this.smtpHost = smtpHost;
 	}
@@ -89,36 +91,42 @@ public class AuthService {
 	}
 
 	private void sendLink(String email, String link) {
-		JavaMailSender sender = mailSender.getIfAvailable();
-		if (sender == null || smtpHost.isBlank()) {
-			log.info("SMTP is not configured. Login link for {}: {}", email, link);
-			return;
-		}
+		String subject = "SENG 403 Question Pool - your login link";
+		String text = """
+				Hello,
+
+				Open this link to sign in to the SENG 403 Question Pool:
+				%s
+
+				The link works one time and only for 15 minutes.
+				If you did not ask for it, you can ignore this e-mail.
+
+				---
+
+				Merhaba,
+
+				SENG 403 Soru Havuzu'na girmek için bu bağlantıyı aç:
+				%s
+
+				Bağlantı yalnızca bir kez ve 15 dakika boyunca çalışır.
+				Bu isteği sen yapmadıysan bu e-postayı dikkate alma.
+				""".formatted(link, link);
 		try {
+			if (ews.isConfigured()) {
+				ews.send(email, subject, text);
+				return;
+			}
+			JavaMailSender sender = mailSender.getIfAvailable();
+			if (sender == null || smtpHost.isBlank()) {
+				log.info("Mail is not configured. Login link for {}: {}", email, link);
+				return;
+			}
 			SimpleMailMessage msg = new SimpleMailMessage();
 			String from = props.mailFrom() == null || props.mailFrom().isBlank() ? smtpUser : props.mailFrom();
 			msg.setFrom(from);
 			msg.setTo(email);
-			msg.setSubject("SENG 403 Question Pool - your login link");
-			msg.setText("""
-					Hello,
-
-					Open this link to sign in to the SENG 403 Question Pool:
-					%s
-
-					The link works one time and only for 15 minutes.
-					If you did not ask for it, you can ignore this e-mail.
-
-					---
-
-					Merhaba,
-
-					SENG 403 Soru Havuzu'na girmek için bu bağlantıyı aç:
-					%s
-
-					Bağlantı yalnızca bir kez ve 15 dakika boyunca çalışır.
-					Bu isteği sen yapmadıysan bu e-postayı dikkate alma.
-					""".formatted(link, link));
+			msg.setSubject(subject);
+			msg.setText(text);
 			sender.send(msg);
 		}
 		catch (Exception e) {

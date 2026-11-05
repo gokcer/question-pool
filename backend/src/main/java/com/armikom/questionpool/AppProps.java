@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AppProps(
 		String baseUrl,
 		String mailFrom,
+		String ewsUrl,
 		String instructorEmail,
 		String instructorName,
 		boolean secureCookies,

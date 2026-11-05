@@ -52,6 +52,7 @@ docker compose exec db pg_dump -U questionpool questionpool > backup.sql
 | `SECURE_COOKIES` | `true` when the site uses HTTPS |
 | `INSTRUCTOR_EMAIL`, `INSTRUCTOR_NAME` | The instructor account, created on the first start |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Mail account that sends login links. With an empty host, links are written to the app log |
+| `EWS_URL` | For Outlook-on-the-web (on-premises Exchange) accounts whose SMTP ports are closed, e.g. `https://mail.thk.edu.tr/EWS/Exchange.asmx`. When set, mail goes through EWS (NTLM) with `SMTP_USER`/`SMTP_PASSWORD`; the sender is always that mailbox |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | AI. With an empty key the site works without AI features |
 | `QUESTIONS_PER_CHAPTER`, `ASK_AI_PER_DAY` | Limits for students |
 
