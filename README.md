@@ -29,6 +29,13 @@ docker compose up -d --build
 The app listens on `127.0.0.1:8080`. Put your reverse proxy with HTTPS in front of it and set `APP_BASE_URL` to the
 public address.
 
+The image is also published as `armikom/question-pool` on Docker Hub, so a server needs only `docker-compose.yml` and
+`.env`:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
 First steps after the start:
 
 1. Open the site and sign in with `INSTRUCTOR_EMAIL`.
@@ -52,7 +59,7 @@ docker compose exec db pg_dump -U questionpool questionpool > backup.sql
 | `SECURE_COOKIES` | `true` when the site uses HTTPS |
 | `INSTRUCTOR_EMAIL`, `INSTRUCTOR_NAME` | The instructor account, created on the first start |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Mail account that sends login links. With an empty host, links are written to the app log |
-| `EWS_URL` | For Outlook-on-the-web (on-premises Exchange) accounts whose SMTP ports are closed, e.g. `https://mail.thk.edu.tr/EWS/Exchange.asmx`. When set, mail goes through EWS (NTLM) with `SMTP_USER`/`SMTP_PASSWORD`; the sender is always that mailbox |
+| `EWS_URL` | For Outlook-on-the-web (on-premises Exchange) accounts whose SMTP ports are closed, e.g. `https://mail.example.edu/EWS/Exchange.asmx`. When set, mail goes through EWS (NTLM) with `SMTP_USER`/`SMTP_PASSWORD`; the sender is always that mailbox |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | AI. With an empty key the site works without AI features |
 | `QUESTIONS_PER_CHAPTER`, `ASK_AI_PER_DAY` | Limits for students |
 
@@ -80,3 +87,24 @@ edit its text.
 Every form has the same questions. The order of the questions inside a chapter and the order of the options are
 different in each form. **Form A / Key A …** open print pages: use the browser's print window and choose
 "Save as PDF". If you change the exam after printing, print every form and key again.
+
+## Docker image
+
+The image name is `armikom/question-pool`. `docker compose build` tags it locally, `docker compose push app` publishes
+it (log in first with `docker login` as the Docker Hub account `armikom`).
+
+```bash
+docker compose build
+docker compose push app
+```
+
+The image holds the jar and the chapter texts from `chapters/` (used on the first start for chapters that have no text
+yet), so running it directly needs only `.env`:
+
+```bash
+docker run --rm -p 127.0.0.1:8080:8080 --env-file .env armikom/question-pool:latest
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
