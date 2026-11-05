@@ -29,8 +29,8 @@ docker compose up -d --build
 The app listens on `127.0.0.1:8080`. Put your reverse proxy with HTTPS in front of it and set `APP_BASE_URL` to the
 public address.
 
-The image is also published as `armikom/question-pool` on Docker Hub, so a server needs only `docker-compose.yml` and
-`.env`:
+Once the image is pushed to Docker Hub as `armikom/question-pool` (see *Docker image* below), a server needs only
+`docker-compose.yml` and `.env`:
 
 ```bash
 docker compose pull && docker compose up -d
