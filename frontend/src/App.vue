@@ -18,6 +18,7 @@ async function logout() {
       <template v-if="isInstructor()">
         <RouterLink to="/instructor/review">Review</RouterLink>
         <RouterLink to="/instructor/students">Students</RouterLink>
+        <RouterLink to="/instructor/teachers">Teachers</RouterLink>
         <RouterLink to="/instructor/flags">Flags</RouterLink>
         <RouterLink to="/instructor/exams">Exams</RouterLink>
         <RouterLink to="/instructor/chapters">Chapter texts</RouterLink>

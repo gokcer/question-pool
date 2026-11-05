@@ -12,6 +12,7 @@ const routes = [
   { path: '/mine', component: () => import('./views/Mine.vue') },
   { path: '/instructor/review', component: () => import('./views/instructor/Review.vue'), meta: { instructor: true } },
   { path: '/instructor/students', component: () => import('./views/instructor/Students.vue'), meta: { instructor: true } },
+  { path: '/instructor/teachers', component: () => import('./views/instructor/Teachers.vue'), meta: { instructor: true } },
   { path: '/instructor/students/:id', component: () => import('./views/instructor/StudentDetail.vue'), meta: { instructor: true } },
   { path: '/instructor/chapters', component: () => import('./views/instructor/Chapters.vue'), meta: { instructor: true } },
   { path: '/instructor/flags', component: () => import('./views/instructor/Flags.vue'), meta: { instructor: true } },

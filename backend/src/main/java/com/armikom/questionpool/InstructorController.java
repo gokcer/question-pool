@@ -41,6 +41,40 @@ public class InstructorController {
 	record ChapterIn(String title, String docEn, String docTr, Boolean open) {
 	}
 
+	record TeacherIn(String email, String fullName) {
+	}
+
+	// ---------- teachers ----------
+
+	/** All instructor accounts, so the instructor can see who else can open these screens. */
+	@GetMapping("/teachers")
+	List<Map<String, Object>> teachers() {
+		return db.sql("""
+				select id, full_name, email, nickname, active, created_at, last_login_at
+				from app_user where role = 'INSTRUCTOR' order by full_name""").query().listOfRows();
+	}
+
+	/** Adds an instructor account. The new teacher signs in with the same e-mail link as everyone else. */
+	@PostMapping("/teachers")
+	Map<String, Object> addTeacher(@RequestBody TeacherIn in) {
+		String email = AuthService.normalize(in.email());
+		String name = in.fullName() == null ? "" : in.fullName().trim();
+		if (!email.matches("[^@\\s]+@[^@\\s]+\\.[^@\\s]+")) {
+			throw QuestionController.bad("Write a valid e-mail address.");
+		}
+		if (name.isEmpty()) {
+			throw QuestionController.bad("Write the full name.");
+		}
+		boolean exists = db.sql("select count(*) from app_user where email = :e").param("e", email)
+				.query(Integer.class).single() > 0;
+		if (exists) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "This e-mail address is already in use.");
+		}
+		db.sql("insert into app_user (email, full_name, role, nickname) values (:e, :n, 'INSTRUCTOR', :nick)")
+				.param("e", email).param("n", name).param("nick", auth.newNickname()).update();
+		return Map.of("ok", true);
+	}
+
 	// ---------- roster ----------
 
 	/** One student per line: e-mail, full name, student number (optional). Comma, semicolon or tab between them. */
