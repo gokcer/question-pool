@@ -5,6 +5,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,7 +43,7 @@ public class InstructorController {
 	record ChapterIn(String title, String docEn, String docTr, Boolean open) {
 	}
 
-	record TeacherIn(String email, String fullName) {
+	record TeacherIn(String email, @JsonAlias("fullName") String fullName) {
 	}
 
 	// ---------- teachers ----------

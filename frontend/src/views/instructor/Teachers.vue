@@ -17,7 +17,7 @@ async function addTeacher() {
   error.value = ''
   result.value = ''
   try {
-    await post('/instructor/teachers', { email: email.value, fullName: fullName.value })
+    await post('/instructor/teachers', { email: email.value, full_name: fullName.value })
     result.value = `${fullName.value.trim()} was added.`
     email.value = ''
     fullName.value = ''
