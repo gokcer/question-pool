@@ -58,7 +58,7 @@ public class AuthService {
 			log.warn("INSTRUCTOR_EMAIL is not set: nobody can open the instructor screens.");
 			return;
 		}
-		int updated = db.sql("update app_user set role = 'INSTRUCTOR', active = true where email = :e")
+		int updated = db.sql("update app_user set role = 'INSTRUCTOR', active = true, deleted_at = null where email = :e")
 				.param("e", email).update();
 		if (updated == 0) {
 			db.sql("insert into app_user (email, full_name, role, nickname) values (:e, :n, 'INSTRUCTOR', 'Instructor')")
@@ -72,7 +72,8 @@ public class AuthService {
 	 */
 	public boolean requestLink(String rawEmail) {
 		String email = normalize(rawEmail);
-		Optional<Long> userId = db.sql("select id from app_user where email = :e and active").param("e", email)
+		Optional<Long> userId = db.sql("""
+				select id from app_user where email = :e and active and deleted_at is null""").param("e", email)
 				.query(Long.class).optional();
 		if (userId.isEmpty()) {
 			return false;
@@ -166,7 +167,8 @@ public class AuthService {
 		return db.sql("""
 				select u.id, u.email, u.full_name, u.role, u.nickname
 				from user_session s join app_user u on u.id = s.user_id
-				where s.token_hash = :h and s.expires_at > now() and u.active""").param("h", sha256(sessionToken))
+				where s.token_hash = :h and s.expires_at > now() and u.active and u.deleted_at is null""")
+				.param("h", sha256(sessionToken))
 				.query(User.class).optional();
 	}
 

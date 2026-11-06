@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { get, post, when } from '../../api'
+import { get, post, del, when } from '../../api'
+import { session } from '../../store'
 
 const teachers = ref([])
 const email = ref('')
@@ -26,6 +27,19 @@ async function addTeacher() {
     error.value = e.message
   }
 }
+
+async function removeTeacher(t) {
+  error.value = ''
+  result.value = ''
+  if (!confirm(`Delete ${t.full_name}? Their account can no longer sign in. / ${t.full_name} silinsin mi? Artık giriş yapamaz.`)) return
+  try {
+    await del(`/instructor/teachers/${t.id}`)
+    result.value = `${t.full_name} was deleted. What they wrote stays in the pool.`
+    await load()
+  } catch (e) {
+    error.value = e.message
+  }
+}
 </script>
 
 <template>
@@ -34,13 +48,19 @@ async function addTeacher() {
     These accounts can open the instructor screens. A new teacher signs in the same way as everyone else: they write
     their e-mail on the login page and receive a one-time link.
   </p>
+  <p class="muted small">
+    Deleting a teacher only closes the account: what they wrote stays in the pool, so the reports do not change.
+    You cannot delete yourself. Adding the same e-mail again brings a deleted teacher back.
+    / Silmek yalnızca hesabı kapatır: yazdıkları havuzda kalır, raporlar bozulmaz. Kendi hesabınızı silemezsiniz;
+    aynı e-posta yeniden eklenirse kişi geri gelir.
+  </p>
   <p v-if="error" class="error">{{ error }}</p>
 
   <div class="scroll card">
     <table>
       <thead>
         <tr>
-          <th>Name</th><th>E-mail</th><th>Nickname</th><th>Status</th><th>Last login</th>
+          <th>Name</th><th>E-mail</th><th>Nickname</th><th>Status</th><th>Last login</th><th>Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -52,11 +72,16 @@ async function addTeacher() {
             <span class="badge" :class="t.active ? 'green' : 'amber'">{{ t.active ? 'active' : 'inactive' }}</span>
           </td>
           <td>{{ t.last_login_at ? when(t.last_login_at) : 'never' }}</td>
+          <td>
+            <span v-if="t.id === session.user?.id" class="muted small">you / siz</span>
+            <button v-else class="danger small" @click="removeTeacher(t)">Delete</button>
+          </td>
         </tr>
       </tbody>
     </table>
     <p v-if="!teachers.length" class="muted">No teachers yet.</p>
   </div>
+  <p v-if="result" class="note green">{{ result }}</p>
 
   <h2>Add a teacher <span class="muted small">/ Öğretmen ekle</span></h2>
   <form @submit.prevent="addTeacher">
@@ -68,5 +93,4 @@ async function addTeacher() {
       <button class="primary" :disabled="!email.trim() || !fullName.trim()">Add teacher</button>
     </p>
   </form>
-  <p v-if="result" class="note green">{{ result }}</p>
 </template>

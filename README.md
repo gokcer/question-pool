@@ -18,6 +18,10 @@ and discuss them. The instructor approves questions and sees who took part. Midt
 - **Question life:** waiting → (automatic AI check gives feedback) → the instructor approves, sends back, or rejects.
   The author can change a question until it is approved or rejected.
 - **Limit:** 2 questions per student per chapter (`QUESTIONS_PER_CHAPTER`). Rejected questions do not count.
+- **Deleting people:** the instructor can delete a teacher or a student. This is a lazy delete: the account row
+  stays, so questions, answers, comments and flags keep their author and the reports stay correct. The person can
+  no longer sign in and an open session ends at once. A teacher cannot delete their own account. Adding the same
+  e-mail again (or importing the class list again) brings the person back.
 
 ## Run on the server
 

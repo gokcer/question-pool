@@ -1,10 +1,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { get, when } from '../../api'
+import { useRoute, useRouter } from 'vue-router'
+import { get, del, when } from '../../api'
 import StatusBadge from '../../components/StatusBadge.vue'
 
 const id = useRoute().params.id
+const router = useRouter()
 const s = ref(null)
 const error = ref('')
 onMounted(async () => {
@@ -14,6 +15,17 @@ onMounted(async () => {
     error.value = e.message
   }
 })
+
+async function removeStudent() {
+  error.value = ''
+  if (!confirm(`Delete ${s.value.full_name}? The account can no longer sign in, but their work stays in the reports. / ${s.value.full_name} silinsin mi? Hesap kapanır, ancak yazdıkları raporlarda kalır.`)) return
+  try {
+    await del(`/instructor/students/${id}`)
+    router.push('/instructor/students')
+  } catch (e) {
+    error.value = e.message
+  }
+}
 </script>
 
 <template>
@@ -49,6 +61,17 @@ onMounted(async () => {
     <div v-for="f in s.flags" :key="f.id" class="card">
       <div class="small muted">{{ when(f.created_at) }} on <RouterLink :to="`/questions/${f.question_id}`">#{{ f.question_id }}</RouterLink></div>
       <div class="pre">{{ f.reason }}</div>
+    </div>
+
+    <div class="card">
+      <h2>Delete this student <span class="muted small">/ Öğrenciyi sil</span></h2>
+      <p class="muted small">
+        Deleting only closes the account: the questions, answers and comments stay in the reports, and the same e-mail
+        can be imported again to bring the student back.
+        / Silmek yalnızca hesabı kapatır: sorular, cevaplar ve yorumlar raporlarda kalır; aynı e-posta yeniden
+        yüklenirse öğrenci geri gelir.
+      </p>
+      <button class="danger" @click="removeStudent">Delete student <span class="small">/ Öğrenciyi sil</span></button>
     </div>
   </template>
 </template>

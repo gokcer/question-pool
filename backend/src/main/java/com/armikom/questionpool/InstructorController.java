@@ -5,14 +5,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,7 +43,7 @@ public class InstructorController {
 	record ChapterIn(String title, String docEn, String docTr, Boolean open) {
 	}
 
-	record TeacherIn(String email, @JsonAlias("fullName") String fullName) {
+	record TeacherIn(String email, String fullName) {
 	}
 
 	// ---------- teachers ----------
@@ -53,7 +53,8 @@ public class InstructorController {
 	List<Map<String, Object>> teachers() {
 		return db.sql("""
 				select id, full_name, email, nickname, active, created_at, last_login_at
-				from app_user where role = 'INSTRUCTOR' order by full_name""").query().listOfRows();
+				from app_user where role = 'INSTRUCTOR' and deleted_at is null order by full_name""")
+				.query().listOfRows();
 	}
 
 	/** Adds an instructor account. The new teacher signs in with the same e-mail link as everyone else. */
@@ -67,6 +68,13 @@ public class InstructorController {
 		if (name.isEmpty()) {
 			throw QuestionController.bad("Write the full name.");
 		}
+		// A deleted account is only marked, so adding the same address again brings the person back.
+		int restored = db.sql("""
+				update app_user set full_name = :n, role = 'INSTRUCTOR', active = true, deleted_at = null
+				where email = :e and deleted_at is not null""").param("n", name).param("e", email).update();
+		if (restored > 0) {
+			return Map.of("ok", true);
+		}
 		boolean exists = db.sql("select count(*) from app_user where email = :e").param("e", email)
 				.query(Integer.class).single() > 0;
 		if (exists) {
@@ -75,6 +83,45 @@ public class InstructorController {
 		db.sql("insert into app_user (email, full_name, role, nickname) values (:e, :n, 'INSTRUCTOR', :nick)")
 				.param("e", email).param("n", name).param("nick", auth.newNickname()).update();
 		return Map.of("ok", true);
+	}
+
+	/**
+	 * Removes an instructor account. Nothing is deleted: the row keeps the date of the deletion, so the questions,
+	 * answers and comments of that person keep their author and the reports stay correct. The account can no longer
+	 * sign in, and an open browser is signed out too. Nobody can delete their own account.
+	 */
+	@DeleteMapping("/teachers/{id}")
+	Map<String, Object> deleteTeacher(@PathVariable long id, @RequestAttribute(WebConfig.USER_ATTRIBUTE) User user) {
+		if (id == user.id()) {
+			throw QuestionController.bad("You cannot delete your own account.");
+		}
+		int changed = db.sql("""
+				update app_user set active = false, deleted_at = now()
+				where id = :id and role = 'INSTRUCTOR' and deleted_at is null""").param("id", id).update();
+		if (changed == 0) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Teacher not found.");
+		}
+		endSessions(id);
+		return Map.of("ok", true);
+	}
+
+	/** Same lazy delete as {@link #deleteTeacher}: the student leaves the lists but their work stays. */
+	@DeleteMapping("/students/{id}")
+	Map<String, Object> deleteStudent(@PathVariable long id) {
+		int changed = db.sql("""
+				update app_user set active = false, deleted_at = now()
+				where id = :id and role = 'STUDENT' and deleted_at is null""").param("id", id).update();
+		if (changed == 0) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found.");
+		}
+		endSessions(id);
+		return Map.of("ok", true);
+	}
+
+	/** Drops the login links and sessions of a removed account, so an open browser cannot keep using it. */
+	private void endSessions(long userId) {
+		db.sql("delete from login_token where user_id = :id").param("id", userId).update();
+		db.sql("delete from user_session where user_id = :id").param("id", userId).update();
 	}
 
 	// ---------- roster ----------
@@ -98,7 +145,7 @@ public class InstructorController {
 				continue;
 			}
 			int changed = db.sql("""
-					update app_user set full_name = :n, student_no = :s, active = true
+					update app_user set full_name = :n, student_no = :s, active = true, deleted_at = null
 					where email = :e and role = 'STUDENT'""").param("n", name).param("s", number).param("e", email)
 					.update();
 			if (changed > 0) {
@@ -131,14 +178,16 @@ public class InstructorController {
 				    (select count(*) from attempt a where a.user_id = u.id and a.correct) as correct,
 				    (select count(*) from comment c where c.author_id = u.id and not c.deleted) as comments,
 				    (select count(*) from flag f where f.user_id = u.id) as flags
-				from app_user u where u.role = 'STUDENT' order by u.full_name""").query().listOfRows();
+				from app_user u where u.role = 'STUDENT' and u.deleted_at is null order by u.full_name""")
+				.query().listOfRows();
 	}
 
 	/** Everything one student wrote, with links back to the questions. */
 	@GetMapping("/students/{id}")
 	Map<String, Object> student(@PathVariable long id) {
 		Map<String, Object> out = new LinkedHashMap<>(db.sql("""
-				select id, full_name, student_no, email, nickname, last_login_at from app_user where id = :id""")
+				select id, full_name, student_no, email, nickname, last_login_at from app_user
+				where id = :id and deleted_at is null""")
 				.param("id", id).query().listOfRows().stream().findFirst()
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Student not found.")));
 		out.put("questions", db.sql("""
