@@ -5,6 +5,7 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
@@ -51,19 +52,60 @@ public class AuthService {
 		this.smtpHost = smtpHost;
 	}
 
+	/**
+	 * Makes every address in {@code INSTRUCTOR_EMAIL} an instructor on each start. The list may hold several
+	 * comma-separated addresses; {@code INSTRUCTOR_NAME} gives their names in the same order.
+	 */
 	@EventListener(ApplicationReadyEvent.class)
-	void ensureInstructor() {
-		String email = normalize(props.instructorEmail());
-		if (email.isEmpty()) {
+	void ensureInstructors() {
+		List<String> emails = props.instructorEmails() == null ? List.of() : props.instructorEmails();
+		List<String> names = props.instructorNames() == null ? List.of() : props.instructorNames();
+		boolean any = false;
+		for (int i = 0; i < emails.size(); i++) {
+			String email = normalize(emails.get(i));
+			if (email.isEmpty()) {
+				continue;
+			}
+			any = true;
+			int updated = db.sql("""
+					update app_user set role = 'INSTRUCTOR', active = true, deleted_at = null
+					where email = :e""").param("e", email).update();
+			if (updated == 0) {
+				db.sql("""
+						insert into app_user (email, full_name, role, nickname)
+						values (:e, :n, 'INSTRUCTOR', :nick)""").param("e", email)
+						.param("n", instructorName(names, i, email)).param("nick", freeInstructorNickname()).update();
+			}
+		}
+		if (!any) {
 			log.warn("INSTRUCTOR_EMAIL is not set: nobody can open the instructor screens.");
-			return;
 		}
-		int updated = db.sql("update app_user set role = 'INSTRUCTOR', active = true, deleted_at = null where email = :e")
-				.param("e", email).update();
-		if (updated == 0) {
-			db.sql("insert into app_user (email, full_name, role, nickname) values (:e, :n, 'INSTRUCTOR', 'Instructor')")
-					.param("e", email).param("n", props.instructorName()).update();
+	}
+
+	/** Name of the n-th instructor; the part before the @ when `INSTRUCTOR_NAME` stops earlier. */
+	private static String instructorName(List<String> names, int index, String email) {
+		if (index < names.size() && names.get(index) != null && !names.get(index).isBlank()) {
+			return names.get(index).trim();
 		}
+		int at = email.indexOf('@');
+		return at > 0 ? email.substring(0, at) : email;
+	}
+
+	/** A nickname that is still free: Instructor, Instructor2, Instructor3, ... */
+	private String freeInstructorNickname() {
+		String nick = "Instructor";
+		for (int n = 2; n < 200; n++) {
+			if (isFreeNickname(nick)) {
+				return nick;
+			}
+			nick = "Instructor" + n;
+		}
+		return newNickname();
+	}
+
+	private boolean isFreeNickname(String nick) {
+		return db.sql("select count(*) from app_user where nickname = :n").param("n", nick)
+				.query(Integer.class).single() == 0;
 	}
 
 	/**

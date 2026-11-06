@@ -61,7 +61,7 @@ docker compose exec db pg_dump -U questionpool questionpool > backup.sql
 | `DB_PASSWORD` | Password of the database |
 | `APP_BASE_URL` | Public address; login links start with it |
 | `SECURE_COOKIES` | `true` when the site uses HTTPS |
-| `INSTRUCTOR_EMAIL`, `INSTRUCTOR_NAME` | The instructor account, created on the first start |
+| `INSTRUCTOR_EMAIL`, `INSTRUCTOR_NAME` | The instructor accounts, created (or restored) on every start. Several addresses: separate them with commas and give their names in the same order in `INSTRUCTOR_NAME` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | Mail account that sends login links. With an empty host, links are written to the app log |
 | `EWS_URL` | For Outlook-on-the-web (on-premises Exchange) accounts whose SMTP ports are closed, e.g. `https://mail.example.edu/EWS/Exchange.asmx`. When set, mail goes through EWS (NTLM) with `SMTP_USER`/`SMTP_PASSWORD`; the sender is always that mailbox |
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | AI. With an empty key the site works without AI features |
